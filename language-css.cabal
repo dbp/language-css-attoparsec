@@ -14,11 +14,12 @@ Maintainer:    <anton.kholomiov@gmail.com>
 
 Library
   Build-Depends:
-        base >= 4, base < 5, pretty  
+        base >= 4, base < 5, pretty, text >= 0.11, attoparsec >= 0.10
   Hs-Source-Dirs:      src/
   Exposed-Modules:
         Language.Css.Syntax
         Language.Css.Pretty
+        Language.Css.Parse
         Language.Css.Build
         Language.Css.Build.Idents
         Language.Css.Build.Tags
