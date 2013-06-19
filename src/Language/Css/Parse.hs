@@ -19,18 +19,22 @@ parseCss _ = Nothing
 styleSheetParser :: Parser StyleSheet
 styleSheetParser = undefined
 
--- | Parse \@charset declarations.
+-- | Parse a CSS \@charset rule.
 --
--- '\@charset' $string
+-- > @charset "UTF-8";
 atcharsetp :: Parser AtCharSet
 atcharsetp = do
   string "@charset"
+  skipSpace
   name <- stringp
+  skipSpace
+  char ';'
   return $ AtCharSet name
 
--- | Parse \@import declarations.
+-- | Parse a CSS \@import rule.
 --
--- \@import $url $media_list;
+-- > @import "hello.css";
+-- > @import url("//example.com/code.css") mobile;
 atimportp :: Parser AtImport
 atimportp = do
   string "@import"
@@ -45,12 +49,16 @@ atimportp = do
   return $ AtImport head media
 
 -- | Parse the location of an \@import statment.
+-- 
+-- This parser accepts either a quoted string or a CSS url literal.
 atimportheadp :: Parser ImportHead
-atimportheadp = (stringp >>= return . IStr) <|> (urip >>= return . IUri) <?> "Import head"
+atimportheadp = (stringp >>= return . IStr)
+                <|> (urip >>= return . IUri)
+                <?> "Import head"
 
 -- | Parse \@media sections.
 --
--- \@media $media_list { $rules }
+-- > @media tv, screen { ... }
 atmediap :: Parser AtMedia
 atmediap = do
   media <- identp `sepBy` char ','
@@ -71,23 +79,38 @@ atfontfacep = undefined
 
 -- | Parse CSS rulesets.
 --
--- $sel { $decls }
+-- > $sel { $decls }
 rulesetp :: Parser RuleSet
 rulesetp = undefined
 
 -- | Parse CSS declarations.
 --
--- $property : $expression $priority?
+-- > $property ':' $expression $priority? ';'?
 declp :: Parser Decl
-declp = undefined
+declp = do
+  name <- propp
+  skipSpace
+  char ':'
+  skipSpace
+  val <- exprp
+  skipSpace
+  pri <- priop
+  skipSpace
+  char ';'
+  skipSpace
+  return $ Decl pri name val
 
 -- | Parse CSS property names.
 propp :: Parser Prop
 propp = identp
 
 -- | Parse CSS priority.
-priop :: Parser Prio
-priop = undefined
+--
+-- XXX TODO Check this for space, etc.
+--
+-- > !important
+priop :: Parser (Maybe Prio)
+priop = (string "!important" >> return (Just Important)) <|> (return Nothing)
 
 -- | Parse CSS value expressions.
 exprp :: Parser Expr
@@ -111,7 +134,24 @@ simpleselp = undefined
 -- id selectors
 -- pseudo selectors
 subselp :: Parser SubSel
-subselp = undefined
+subselp = choice [selip, selcp {-, selap, selpp -}]
+
+-- XXX TODO: This is extremely wrong.
+selip = char '#' >> takeWhile1 (not . isHorizontalSpace)
+        >>= return . IdSel . T.unpack
+
+-- XXX TODO: This is extremely wrong.
+selcp = char '.' >> takeWhile1 (not . isHorizontalSpace)
+        >>= return . ClassSel . T.unpack
+
+-- XXX TODO: This is very wrong.
+selpp = do
+  char ':'
+  s <- identp
+  return $ PseudoSel 
+
+-- XXX TODO: This is very wrong.
+selap = "[" .*> identp <*. "]"
 
 -- | Parse CSS element names.
 --
@@ -242,9 +282,9 @@ urip = do
 --
 -- XXX TODO: implement the complete grammar of quoted strings.
 --
--- string1		\"([^\n\r\f\\"]|\\{nl}|{escape})*\"
--- string2		\'([^\n\r\f\\']|\\{nl}|{escape})*\'
--- string		{string1}|{string2}
+-- > string1		\"([^\n\r\f\\"]|\\{nl}|{escape})*\"
+-- > string2		\'([^\n\r\f\\']|\\{nl}|{escape})*\'
+-- > string		{string1}|{string2}
 stringp :: Parser String
 stringp = dquotesp <|> squotesp <?> "String"
   where dquotesp = "\"" .*> stringOf (/= '"') <*. "\""
