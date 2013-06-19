@@ -1,15 +1,19 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- | Parse CSS text into the AST defined in "Language.Css.Syntax".
 module Language.Css.Parse where
 
+import Prelude hiding (takeWhile)
+import           Control.Applicative
+import           Data.Attoparsec.Text
+import           Data.Attoparsec.Combinator
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Attoparsec.Text
 
-import Language.Css.Syntax
+import           Language.Css.Syntax
 
 -- | Parse a 'Data.Text.Text' into a 'StyleSheet' if possible.
-parse :: Text -> Maybe StyleSheet
-parse _ = Nothing
+parseCss :: Text -> Maybe StyleSheet
+parseCss _ = Nothing
 
 -- | Attoparsec parser for the CSS2.1 grammar.
 styleSheetParser :: Parser StyleSheet
@@ -19,19 +23,39 @@ styleSheetParser = undefined
 --
 -- '\@charset' $string
 atcharsetp :: Parser AtCharSet
-atcharsetp = undefined
+atcharsetp = do
+  string "@charset"
+  name <- stringp
+  return $ AtCharSet name
 
 -- | Parse \@import declarations.
 --
 -- \@import $url $media_list;
 atimportp :: Parser AtImport
-atimportp = undefined
+atimportp = do
+  string "@import"
+  skipSpace
+  head <- atimportheadp
+  -- let head = IStr "Hello"
+  skipSpace
+  media <- mediap `sepBy` (string ",")
+  -- let media = []
+  skipSpace
+  char ';'
+  return $ AtImport head media
+
+-- | Parse the location of an \@import statment.
+atimportheadp :: Parser ImportHead
+atimportheadp = (stringp >>= return . IStr) <|> (urip >>= return . IUri) <?> "Import head"
 
 -- | Parse \@media sections.
 --
 -- \@media $media_list { $rules }
 atmediap :: Parser AtMedia
-atmediap = undefined
+atmediap = do
+  media <- identp `sepBy` char ','
+  let rules = [] -- XXX TODO
+  return $ AtMedia media rules
 
 -- | Parse \@page rules.
 --
@@ -68,7 +92,6 @@ priop = undefined
 -- | Parse CSS value expressions.
 exprp :: Parser Expr
 exprp = undefined
-
 
 -- | Parse CSS selectors.
 selp :: Parser Sel
@@ -115,8 +138,20 @@ valuep :: Parser Value
 valuep = undefined
 
 -- | Parse CSS identifiers.
+--
+-- nmstart		[_a-z]|{nonascii}|{escape}
+-- nmchar		[_a-z0-9-]|{nonascii}|{escape}
+-- ident		-?{nmstart}{nmchar}*
 identp :: Parser Ident
-identp = undefined
+identp = do
+  dash <- option "" (string "-")
+  first <- satisfy nmstart
+  rest <- takeWhile nmchar
+  return $ Ident $ (T.unpack dash) ++ first:(T.unpack rest)
+
+-- | Parse CSS media values.
+mediap :: Parser Ident
+mediap = identp
 
 -- | Parse CSS functions.
 --
@@ -195,9 +230,45 @@ sp :: Parser S
 sp = undefined
 
 -- | Parse CSS URI values.
+-- url		([!#$%&*-~]|{nonascii}|{escape})*
+-- "url("{w}{string}{w}")" {return URI;}
+-- "url("{w}{url}{w}")"    {return URI;}
 urip :: Parser Uri
-urip = undefined
+urip = do
+  "url(" .*> (stringp >>= return . Uri) <*. ")"
+  
 
 -- | Parse CSS string values.
+--
+-- XXX TODO: implement the complete grammar of quoted strings.
+--
+-- string1		\"([^\n\r\f\\"]|\\{nl}|{escape})*\"
+-- string2		\'([^\n\r\f\\']|\\{nl}|{escape})*\'
+-- string		{string1}|{string2}
 stringp :: Parser String
-stringp = undefined
+stringp = dquotesp <|> squotesp <?> "String"
+  where dquotesp = "\"" .*> stringOf (/= '"') <*. "\""
+        squotesp = "'" .*> stringOf (/= '\'') <*. "'"
+        stringOf p = takeWhile p >>= return . T.unpack
+
+-- | Parse escaped unicode characters.
+--
+-- XXX TODO This should only accept {1,6}.
+unicodep :: Parser Char
+unicodep = do
+  char '\\'
+  hexadecimal >>= return . toEnum
+
+
+-- | Parse new line escaped new line characters within CSS string values.
+--
+-- nl		\n|\r\n|\r|\f
+nl :: Parser Char
+nl = choice [char '\n', string "\r\n" >> return '\n', char '\r', char '\f']
+
+-- | CSS nonterminal nmstart
+nmstart	:: Char -> Bool
+nmstart = flip elem $ "[_a-z]|{nonascii}|{escape}"
+
+nmchar :: Char -> Bool
+nmchar = flip elem $ "[_a-z0-9-]|{nonascii}|{escape}"
