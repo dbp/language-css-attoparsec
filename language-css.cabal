@@ -38,6 +38,8 @@ Test-Suite test-parser
   Build-Depends:  base >= 4 && < 5,
                   test-framework >= 0.3.3,
                   test-framework-quickcheck2 >= 0.2.9,
+                  test-framework-hunit >= 0.3.0,
+                  HUnit >= 1.2 && < 2,
                   QuickCheck >= 2.4.0.1,
                   attoparsec >= 0.10,
                   text >= 0.11,

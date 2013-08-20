@@ -4,10 +4,11 @@
 module Main (main) where
 
 import Properties (properties)
+import Unittests (unittests)
 import Test.Framework (defaultMain, testGroup)
 
 main :: IO ()
-main = defaultMain [
-         testGroup "properties" properties
-       ]
+main = defaultMain [ testGroup "properties" properties
+                   , testGroup "unittests" unittests
+                   ]
 
