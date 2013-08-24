@@ -28,11 +28,21 @@ roundtripSelector = roundTrip (T.pack . prettyPrint) selp
 roundtripValue :: Value -> Bool
 roundtripValue = roundTrip (T.pack . prettyPrint) valuep
 
+-- | Property: (print . parse) == id for 'Color'.
+roundtripColor :: Color -> Bool
+roundtripColor = roundTrip (T.pack . prettyPrint) colorp
+
+-- | Property: (print . parse) == id for 'Uri'.
+roundtripUri :: Uri -> Bool
+roundtripUri = roundTrip (T.pack . prettyPrint) urip
+
 -- | All properties to be tested.
 properties :: [Test]
 properties =
     [ testGroup "roundtrip"
       [ testProperty "roundtrip/selector" roundtripSelector
+      , testProperty "roundtrip/color" roundtripColor
+      , testProperty "roundtrip/uri" roundtripUri
       , testProperty "roundtrip/value" roundtripValue
       ]
     ]
