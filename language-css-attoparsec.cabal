@@ -1,0 +1,44 @@
+Name:          language-css-attoparsec
+Version:       0.0.3
+Cabal-Version: >= 1.8
+License:       BSD3
+License-file:  LICENSE
+Author:        Thomas Sutton
+Synopsis:      Parser for CSS 2.1 syntax. 
+Description:   library for parsing CSS 2.1 code.
+Stability:     Experimental
+Tested-With:   GHC==7.6.3
+Build-Type:    Simple
+Category:      Language
+Maintainer:    <me@thomas-sutton.id.au>
+
+--------------------------------------------------------------------------------
+Library
+  Build-Depends: base >= 4 && < 5
+               , pretty
+               , language-css >= 0.0.3 && < 0.1
+               , text >= 0.11
+               , attoparsec >= 0.10
+  Hs-Source-Dirs:      src/
+  Exposed-Modules:
+        Language.Css.Parse
+  Other-Modules:
+
+
+
+--------------------------------------------------------------------------------
+Test-Suite test-parser
+  Type:           exitcode-stdio-1.0
+  Hs-Source-Dirs: test/
+  Main-Is:        test-parser.hs
+  Other-Modules:  Properties, CssGen
+  Build-Depends:  base >= 4 && < 5,
+                  test-framework >= 0.3.3,
+                  test-framework-quickcheck2 >= 0.2.9,
+                  QuickCheck >= 2.4.0.1,
+                  attoparsec >= 0.10,
+                  text >= 0.11,
+                  language-css >= 0.0.3,
+                  language-css-attoparsec >= 0.0.3
+
+

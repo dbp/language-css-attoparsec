@@ -1,18 +1,18 @@
 -- | QuickCheck tests for the 'Language.Css.Parse' module.
 module Properties (properties) where
 
-import Test.Framework (Test, testGroup)
-import Test.Framework.Providers.QuickCheck2 (testProperty)
-
-import CssGen
-import Language.Css.Syntax
-import Language.Css.Pretty
-import Language.Css.Parse
-
 import qualified Data.Text as T
 import           Data.Attoparsec.Text
+import           Test.Framework (Test, testGroup)
+import           Test.Framework.Providers.QuickCheck2 (testProperty)
 
-------------------------------------------------------------------------
+import           Language.Css.Syntax
+import           Language.Css.Pretty
+import           Language.Css.Parse
+
+import           CssGen
+
+--------------------------------------------------------------------------------
 -- * Properties
 
 -- | Round-trip property between an attoparsec parser and a pretty printer.
