@@ -2,10 +2,13 @@
 -- | Parse CSS text into the AST defined in "Language.Css.Syntax".
 module Language.Css.Parse where
 
-import Prelude hiding (takeWhile)
+import Prelude hiding (takeWhile, exp)
 import           Control.Applicative
 import           Data.Attoparsec.Text
 import           Data.Attoparsec.Combinator
+import           Data.Bits (shiftL)
+import           Data.Char
+import           Data.Int
 import           Data.Text (Text)
 import qualified Data.Text as T
 
@@ -114,7 +117,7 @@ priop = (string "!important" >> return (Just Important)) <|> (return Nothing)
 
 -- | Parse CSS value expressions.
 exprp :: Parser Expr
-exprp = undefined
+exprp = EVal <$> valuep
 
 -- | Parse CSS selectors.
 selp :: Parser Sel
@@ -134,7 +137,7 @@ simpleselp = undefined
 -- id selectors
 -- pseudo selectors
 subselp :: Parser SubSel
-subselp = choice [selip, selcp {-, selap, selpp -}]
+subselp = choice [selip, selcp , selap {-, selpp-}]
 
 -- XXX TODO: This is extremely wrong.
 selip = char '#' >> takeWhile1 (not . isHorizontalSpace)
@@ -151,7 +154,11 @@ selpp = do
   return $ PseudoSel 
 
 -- XXX TODO: This is very wrong.
-selap = "[" .*> identp <*. "]"
+selap = do
+  char '['
+  a <- attrp
+  char ']'
+  return $ (AttrSel a)
 
 -- | Parse CSS element names.
 --
@@ -161,10 +168,25 @@ elementp = undefined
 
 -- | Parse CSS attribute selector expressions.
 attrp :: Parser Attr
-attrp = undefined
+attrp =
+  char '[' *> {- space* -} (choice options) {- space* -} <* char ']'
+  <?> "Attribute selector."
+  where
+    options = [attr_is, attr_contains, attr_starts, attr_name]
+    attr_name = (Attr) <$> attridentp <?> "Attribute present selector."
+    attr_is = do
+      n <- attridentp
+      -- space*
+      char '='
+      -- space*
+      v <- attridentp
+      return $ AttrIs n v
+      <?> "Attribute value selector."
+    attr_contains = fail "None" <?> "Attribute 'contains' selector."
+    attr_starts = fail "None" <?> "Attribute 'starts' selector."
 
 -- | Parse CSS attribute names.
-attridentp = identp
+attridentp = many1 (letter <|> digit)
 
 -- | Parse CSS pseudo-selectors.
 --
@@ -175,7 +197,30 @@ pseudovalp = undefined
 
 -- | Parse CSS values.
 valuep :: Parser Value
-valuep = undefined
+valuep = choice [ VDeg <$> degreep
+                , VRad <$> radianp
+                , VGrad <$> gradianp
+                , VColor <$> colorp
+                , VHz <$> hzp
+                , VKHz <$> khzp
+                , VPercentage <$> percentagep
+                , VEm <$> emp
+                , VEx <$> exp
+                , VPx <$> pxp
+                , VIn <$> inp
+                , VCm <$> cmp
+                , VMm <$> mmp
+                , VPc <$> pcp
+                , VPt <$> ptp
+                , VString <$> stringp
+                , VMs <$> msp
+                , VS <$> sp
+                , VFunc <$> funcp
+                , VUri <$> urip
+                --, VIdent <$> identp
+                , VDouble <$> signed double
+                , VInt <$> signed decimal
+                ]
 
 -- | Parse CSS identifiers.
 --
@@ -197,86 +242,148 @@ mediap = identp
 --
 -- $ident '(' $expr ')'
 funcp :: Parser Func
-funcp = undefined
+funcp = Func <$> identp <*> (char '(' *> exprp <* char ')')
 
--- | Parse CSS angle values (degree).
-degp :: Parser Deg
-degp = undefined
+-- | Parse a 'degrees' value.
+--
+-- > 1.1deg
+degreep = Deg <$> (double <* string "deg")
 
--- | Parse CSS angle values (radian).
-radp :: Parser Rad
-radp = undefined
+-- | Parse a 'radians' value.
+--
+-- > 1.1rad
+radianp = Rad <$> (double <* string "rad")
 
--- | Parse CSS angle values (gradian).
-gradp :: Parser Grad
-gradp = undefined
+-- | Parse a 'gradians' value.
+--
+-- > 1.1grad
+gradianp = Grad <$> (double <* string "grad")
 
--- | Parse CSS color values.
+-- | Parse a color value.
+--
+-- > #fff
+-- > #f0f0f0
+-- > rgb(128,255,0)
+-- > fuchsia
 colorp :: Parser Color
-colorp = undefined
+colorp = colorname
+         <|> hex6color
+         <|> hex3color
+         <|> rgbcolor
+         <?> "Color value"
+
+-- | Parse color name values.
+colorname :: Parser Color
+colorname = Cword . T.unpack <$> (choice $ map string $ [ "aqua", "black", "blue", "fuchsia", "gray"
+                                  , "green", "lime", "maroon", "navy", "olive"
+                                  , "orange", "purple", "red", "silver", "teal"
+                                  , "white", "yellow"])
+            <?> "Color name"
+
+-- | Parse 6-digit hexadecimal color values.
+hex6color = char '#' *> (Crgb <$> hex <*> hex <*> hex) <?> "6-digit hexadecimal color value."
+  where
+    hex :: Parser Int
+    hex = intFromHex <$> satisfy isHexDigit <*> satisfy isHexDigit
+
+-- | Parse 3-digit hexadecimal color values.
+hex3color = char '#' *> (Crgb <$> hex <*> hex <*> hex) <?> "3-digit hexadecimcal color value."
+  where
+    hex :: Parser Int
+    hex = (\i -> intFromHex i i) <$> satisfy isHexDigit
+
+-- | Parse RGB color value.
+--
+-- NB: This parser accepts values outside the range of 0..255. This is
+-- deliberate and required by the specification.
+-- 
+-- > rgb(1,255,78)
+-- > rgb(110%,0,50%)
+--
+-- TODO: This parser should allow whitespace internally.
+rgbcolor = string "rgb(" *> ( Crgb <$> val <* char ',' <*> val <* char ',' <*> val) <* char ')'
+  where
+    val  = (pval <|> nval)
+    pval = round . (2.55 *) . fromInteger <$> (skipSpace *> signed decimal <* char '%' <* skipSpace)
+    nval = skipSpace *> (signed decimal) <* skipSpace
 
 -- | Parse CSS frequency values (Hz).
+--
+-- > 10.1hz
+--
+-- TODO: Should be case insensitive
 hzp :: Parser Hz
-hzp = undefined
+hzp = Hz <$> (signed double) <* asciiCI "hz"
 
 -- | Parse CSS frequency values (kHz).
+--
+-- > 10.1khz
+--
+-- TODO: Should be case insensitive
 khzp :: Parser KHz
-khzp = undefined
+khzp = KHz <$> (signed double) <* asciiCI "khz"
 
 -- | Parse CSS length values (em).
+--
+-- > 10em
+--
+-- TODO: Should be case insensitive.
 emp :: Parser Em
-emp = undefined
+emp = Em <$> (signed double) <* string "em"
 
 -- | Parse CSS length values (ex).
 exp :: Parser Ex
-exp = undefined
+exp = Ex <$> (signed double) <* string "ex"
 
 -- | Parse CSS length values (px).
 pxp :: Parser Px
-pxp = undefined
+pxp = Px <$> (signed decimal) <* string "px"
 
 -- | Parse CSS length values (in).
 inp :: Parser In
-inp = undefined
+inp = In <$> (signed double) <* string "in"
 
 -- | Parse CSS length values (cm).
 cmp :: Parser Cm
-cmp = undefined
+cmp = Cm <$> (signed double) <* string "cm"
 
 -- | Parse CSS length values (mm).
 mmp :: Parser Mm
-mmp = undefined
+mmp = Mm <$> (signed double) <* string "mm"
 
 -- | Parse CSS length values (pc).
 --
 -- XXX TODO: is this pica?
 pcp :: Parser Pc
-pcp = undefined
+pcp = Pc <$> (signed double) <* string "pc"
 
 -- | Parse CSS length values (pt).
 ptp :: Parser Pt
-ptp = undefined
+ptp = Pt <$> (signed decimal) <* string "pt"
 
 -- | Parse CSS percentage values.
 percentagep :: Parser Percentage
-percentagep = undefined
+percentagep = Percentage <$> (signed double) <* char '%'
 
 -- | Parse CSS time values (ms).
 msp :: Parser Ms
-msp = undefined
+msp = Ms <$> (signed double) <* string "ms"
 
 -- | Parse CSS time values (s).
 sp :: Parser S
-sp = undefined
+sp = S <$> (signed double) <* string "s"
 
 -- | Parse CSS URI values.
--- url		([!#$%&*-~]|{nonascii}|{escape})*
+--
 -- "url("{w}{string}{w}")" {return URI;}
--- "url("{w}{url}{w}")"    {return URI;}
 urip :: Parser Uri
-urip = do
-  "url(" .*> (stringp >>= return . Uri) <*. ")"
-  
+urip = Uri <$> (asciiCI "url(" *> skipSpace *> (stringp <|> urlp) <* skipSpace <* char ')')
+
+-- | Parse an un-quoted URL in CSS.
+--
+-- TODO: This should accept ([!#$%&*-~]|{nonascii}|{escape})*
+urlp :: Parser String
+urlp = T.unpack <$> takeTill (== ')') <?> "Unquoted URL string."
 
 -- | Parse CSS string values.
 --
@@ -286,7 +393,7 @@ urip = do
 -- > string2		\'([^\n\r\f\\']|\\{nl}|{escape})*\'
 -- > string		{string1}|{string2}
 stringp :: Parser String
-stringp = dquotesp <|> squotesp <?> "String"
+stringp = dquotesp <|> squotesp <?> "Quoted string."
   where dquotesp = "\"" .*> stringOf (/= '"') <*. "\""
         squotesp = "'" .*> stringOf (/= '\'') <*. "'"
         stringOf p = takeWhile p >>= return . T.unpack
@@ -298,7 +405,6 @@ unicodep :: Parser Char
 unicodep = do
   char '\\'
   hexadecimal >>= return . toEnum
-
 
 -- | Parse new line escaped new line characters within CSS string values.
 --
@@ -312,3 +418,18 @@ nmstart = flip elem $ "[_a-z]|{nonascii}|{escape}"
 
 nmchar :: Char -> Bool
 nmchar = flip elem $ "[_a-z0-9-]|{nonascii}|{escape}"
+
+-- * Utilities
+
+-- | Convert two hex digits to an int.
+--
+-- Assumes that the characters are valid hexadecimal digits.
+intFromHex :: Char -> Char -> Int
+intFromHex h l = (high $ ord h) + (low $ ord l)
+  where 
+    high w | w >= 48 && w <= 57  = fromIntegral (w - 48) `shiftL` 4
+           | w >= 97             = fromIntegral (w - 87) `shiftL` 4
+           | otherwise           = fromIntegral (w - 55) `shiftL` 4
+    low w | w >= 48 && w <= 57  = fromIntegral (w - 48)
+          | w >= 97             = fromIntegral (w - 87)
+          | otherwise           = fromIntegral (w - 55)
