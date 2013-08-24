@@ -21,6 +21,10 @@ roundTrip pprint parser input = case (parseOnly parser $ pprint input) of
   Right p -> p == input
 
 -- | Property: (print . parse) == id for 'Sel'.
+roundtripImport :: AtImport -> Bool
+roundtripImport = roundTrip (T.pack . prettyPrint) atimportp
+
+-- | Property: (print . parse) == id for 'Sel'.
 roundtripSelector :: Sel -> Bool
 roundtripSelector = roundTrip (T.pack . prettyPrint) selp
 
@@ -41,6 +45,7 @@ properties :: [Test]
 properties =
     [ testGroup "roundtrip"
       [ testProperty "roundtrip/selector" roundtripSelector
+      , testProperty "roundtrip/import" roundtripImport
       , testProperty "roundtrip/color" roundtripColor
       , testProperty "roundtrip/uri" roundtripUri
       , testProperty "roundtrip/value" roundtripValue
