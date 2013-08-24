@@ -2,7 +2,7 @@
 -- | Parse CSS text into the AST defined in "Language.Css.Syntax".
 module Language.Css.Parse where
 
-import Prelude hiding (takeWhile, exp)
+import Prelude hiding (take, takeWhile, exp)
 import           Control.Applicative
 import           Data.Attoparsec.Text
 import           Data.Attoparsec.Combinator
@@ -27,7 +27,7 @@ styleSheetParser = undefined
 -- > @charset "UTF-8";
 atcharsetp :: Parser AtCharSet
 atcharsetp = do
-  string "@charset"
+  asciiCI "@charset"
   skipSpace
   name <- stringp
   skipSpace
@@ -40,13 +40,12 @@ atcharsetp = do
 -- > @import url("//example.com/code.css") mobile;
 atimportp :: Parser AtImport
 atimportp = do
-  string "@import"
+  asciiCI "@import"
   skipSpace
   head <- atimportheadp
   -- let head = IStr "Hello"
   skipSpace
-  media <- mediap `sepBy` (string ",")
-  -- let media = []
+  media <- mediap `sepBy` (char ',' *> skipSpace)
   skipSpace
   char ';'
   return $ AtImport head media
@@ -113,11 +112,14 @@ propp = identp
 --
 -- > !important
 priop :: Parser (Maybe Prio)
-priop = (string "!important" >> return (Just Important)) <|> (return Nothing)
+priop = (asciiCI "!important" >> return (Just Important)) <|> (return Nothing)
 
 -- | Parse CSS value expressions.
 exprp :: Parser Expr
-exprp = EVal <$> valuep
+exprp = EVal <$> valuep <|>
+        SlashSep <$> exprp <*> (char '/' *> exprp) <|>
+        CommaSep <$> exprp <*> (char ',' *> exprp) <|>
+        SpaceSep <$> exprp <*> (char ' ' *> exprp)
 
 -- | Parse CSS selectors.
 selp :: Parser Sel
@@ -217,9 +219,9 @@ valuep = choice [ VDeg <$> degreep
                 , VS <$> sp
                 , VFunc <$> funcp
                 , VUri <$> urip
-                --, VIdent <$> identp
-                , VDouble <$> signed double
+                , VIdent <$> identp
                 , VInt <$> signed decimal
+                , VDouble <$> signed double
                 ]
 
 -- | Parse CSS identifiers.
@@ -230,8 +232,8 @@ valuep = choice [ VDeg <$> degreep
 identp :: Parser Ident
 identp = do
   dash <- option "" (string "-")
-  first <- satisfy nmstart
-  rest <- takeWhile nmchar
+  first <- nmstartp
+  rest <- takeWhile (\c -> nmstart c || isDigit c)
   return $ Ident $ (T.unpack dash) ++ first:(T.unpack rest)
 
 -- | Parse CSS media values.
@@ -247,17 +249,17 @@ funcp = Func <$> identp <*> (char '(' *> exprp <* char ')')
 -- | Parse a 'degrees' value.
 --
 -- > 1.1deg
-degreep = Deg <$> (double <* string "deg")
+degreep = Deg <$> (double <* asciiCI "deg")
 
 -- | Parse a 'radians' value.
 --
 -- > 1.1rad
-radianp = Rad <$> (double <* string "rad")
+radianp = Rad <$> (double <* asciiCI "rad")
 
 -- | Parse a 'gradians' value.
 --
 -- > 1.1grad
-gradianp = Grad <$> (double <* string "grad")
+gradianp = Grad <$> (double <* asciiCI "grad")
 
 -- | Parse a color value.
 --
@@ -274,10 +276,11 @@ colorp = colorname
 
 -- | Parse color name values.
 colorname :: Parser Color
-colorname = Cword . T.unpack <$> (choice $ map string $ [ "aqua", "black", "blue", "fuchsia", "gray"
-                                  , "green", "lime", "maroon", "navy", "olive"
-                                  , "orange", "purple", "red", "silver", "teal"
-                                  , "white", "yellow"])
+colorname = Cword . T.unpack <$>
+            (choice $ map asciiCI $ ["aqua", "black", "blue", "fuchsia", "gray"
+                                    , "green", "lime", "maroon", "navy", "olive"
+                                    , "orange", "purple", "red", "silver"
+                                    , "teal", "white", "yellow"])
             <?> "Color name"
 
 -- | Parse 6-digit hexadecimal color values.
@@ -301,7 +304,7 @@ hex3color = char '#' *> (Crgb <$> hex <*> hex <*> hex) <?> "3-digit hexadecimcal
 -- > rgb(110%,0,50%)
 --
 -- TODO: This parser should allow whitespace internally.
-rgbcolor = string "rgb(" *> ( Crgb <$> val <* char ',' <*> val <* char ',' <*> val) <* char ')'
+rgbcolor = asciiCI "rgb(" *> ( Crgb <$> val <* char ',' <*> val <* char ',' <*> val) <* char ')'
   where
     val  = (pval <|> nval)
     pval = round . (2.55 *) . fromInteger <$> (skipSpace *> signed decimal <* char '%' <* skipSpace)
@@ -329,37 +332,35 @@ khzp = KHz <$> (signed double) <* asciiCI "khz"
 --
 -- TODO: Should be case insensitive.
 emp :: Parser Em
-emp = Em <$> (signed double) <* string "em"
+emp = Em <$> (signed double) <* asciiCI "em"
 
 -- | Parse CSS length values (ex).
 exp :: Parser Ex
-exp = Ex <$> (signed double) <* string "ex"
+exp = Ex <$> (signed double) <* asciiCI "ex"
 
 -- | Parse CSS length values (px).
 pxp :: Parser Px
-pxp = Px <$> (signed decimal) <* string "px"
+pxp = Px <$> (signed decimal) <* asciiCI "px"
 
 -- | Parse CSS length values (in).
 inp :: Parser In
-inp = In <$> (signed double) <* string "in"
+inp = In <$> (signed double) <* asciiCI "in"
 
 -- | Parse CSS length values (cm).
 cmp :: Parser Cm
-cmp = Cm <$> (signed double) <* string "cm"
+cmp = Cm <$> (signed double) <* asciiCI "cm"
 
 -- | Parse CSS length values (mm).
 mmp :: Parser Mm
-mmp = Mm <$> (signed double) <* string "mm"
+mmp = Mm <$> (signed double) <* asciiCI "mm"
 
 -- | Parse CSS length values (pc).
---
--- XXX TODO: is this pica?
 pcp :: Parser Pc
-pcp = Pc <$> (signed double) <* string "pc"
+pcp = Pc <$> (signed double) <* asciiCI "pc"
 
 -- | Parse CSS length values (pt).
 ptp :: Parser Pt
-ptp = Pt <$> (signed decimal) <* string "pt"
+ptp = Pt <$> (signed decimal) <* asciiCI "pt"
 
 -- | Parse CSS percentage values.
 percentagep :: Parser Percentage
@@ -367,11 +368,11 @@ percentagep = Percentage <$> (signed double) <* char '%'
 
 -- | Parse CSS time values (ms).
 msp :: Parser Ms
-msp = Ms <$> (signed double) <* string "ms"
+msp = Ms <$> (signed double) <* asciiCI "ms"
 
 -- | Parse CSS time values (s).
 sp :: Parser S
-sp = S <$> (signed double) <* string "s"
+sp = S <$> (signed double) <* asciiCI "s"
 
 -- | Parse CSS URI values.
 --
@@ -412,12 +413,24 @@ unicodep = do
 nl :: Parser Char
 nl = choice [char '\n', string "\r\n" >> return '\n', char '\r', char '\f']
 
--- | CSS nonterminal nmstart
-nmstart	:: Char -> Bool
-nmstart = flip elem $ "[_a-z]|{nonascii}|{escape}"
+-- | Valid inital character in a CSS name.
+--
+-- [_a-z]|{nonascii}|{escape}
+nmstartp :: Parser Char
+nmstartp = nonasciip <|> escapep <|> (satisfy nmstart)
 
-nmchar :: Char -> Bool
-nmchar = flip elem $ "[_a-z0-9-]|{nonascii}|{escape}"
+nmstart c | c == '_' = True
+          | 'a' <= c && c <= 'z' = True
+          | otherwise = False
+
+nonasciip = fail "Non-ASCII character"
+escapep = fail "Escaped character"
+
+-- | Valid non-initial character in a CSS name.
+--
+-- [_a-z0-9-]|{nonascii}|{escape}
+nmcharp :: Parser Char
+nmcharp = nmstartp <|> digit
 
 -- * Utilities
 
