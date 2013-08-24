@@ -26,46 +26,32 @@ styleSheetParser = undefined
 --
 -- > @charset "UTF-8";
 atcharsetp :: Parser AtCharSet
-atcharsetp = do
-  asciiCI "@charset"
-  skipSpace
-  name <- stringp
-  skipSpace
-  char ';'
-  return $ AtCharSet name
+atcharsetp = AtCharSet <$> (asciiCI "@charset" *> skipSpace *> stringp <* skipSpace <* char ';')
 
 -- | Parse a CSS \@import rule.
 --
 -- > @import "hello.css";
--- > @import url("//example.com/code.css") mobile;
+-- > @import url("//example.com/code.css") mobile, screen;
 atimportp :: Parser AtImport
-atimportp = do
-  asciiCI "@import"
-  skipSpace
-  head <- atimportheadp
-  -- let head = IStr "Hello"
-  skipSpace
-  media <- mediap `sepBy` (char ',' *> skipSpace)
-  skipSpace
-  char ';'
-  return $ AtImport head media
+atimportp = AtImport <$> (asciiCI "@import" *> skipSpace *> atimportheadp)
+                     <*> (skipSpace *> mediap `sepBy` (char ',' >> skipSpace))
+                     <*  (skipSpace <* char ';')
 
 -- | Parse the location of an \@import statment.
 -- 
 -- This parser accepts either a quoted string or a CSS url literal.
 atimportheadp :: Parser ImportHead
-atimportheadp = (stringp >>= return . IStr)
-                <|> (urip >>= return . IUri)
+atimportheadp = (IStr <$> stringp) <|> (IUri <$> urip)
                 <?> "Import head"
 
 -- | Parse \@media sections.
 --
 -- > @media tv, screen { ... }
+--
+-- TODO: Implement rules block
 atmediap :: Parser AtMedia
-atmediap = do
-  media <- identp `sepBy` char ','
-  let rules = [] -- XXX TODO
-  return $ AtMedia media rules
+atmediap = AtMedia <$> (asciiCI "@media" *> skipSpace *> identp `sepBy` (char ',' *> skipSpace))
+                   <*> (skipSpace *> char '{' *> many rulesetp <* char '}' <* skipSpace)
 
 -- | Parse \@page rules.
 --
