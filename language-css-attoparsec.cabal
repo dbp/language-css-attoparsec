@@ -31,7 +31,7 @@ Test-Suite test-parser
   Type:           exitcode-stdio-1.0
   Hs-Source-Dirs: test/
   Main-Is:        test-parser.hs
-  Other-Modules:  Properties, CssGen
+  Other-Modules:  Properties, Unittests, CssGen
   Build-Depends:  base >= 4 && < 5,
                   test-framework >= 0.3.3,
                   test-framework-quickcheck2 >= 0.2.9,
