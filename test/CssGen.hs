@@ -7,6 +7,9 @@ import Test.QuickCheck
 
 import Language.Css.Syntax as CSS
 
+-- | Compromise the validity of my tests, by generating truly biased doubles.
+compromiseMyself = fromInteger
+
 newtype HtmlElement = HtmlElement String deriving (Show)
 
 htmlElements = ["div", "span", "html", "body", "p", "ul", "li"]
@@ -26,29 +29,38 @@ instance Arbitrary Attr where
 
 -- instance Arbitrary Id where
 
+instance Arbitrary AtImport where
+  arbitrary = liftM2 AtImport arbitrary arbitrary
+
+instance Arbitrary ImportHead where
+  arbitrary = oneof [ liftM IStr arbitrary
+                    , liftM IUri arbitrary
+                    ]
+
+
 instance Arbitrary Value where
-  arbitrary = oneof [ liftM (VDeg . Deg) arbitrary
-                    , liftM (VRad . Rad) arbitrary
-                    , liftM (VGrad . Grad) arbitrary
+  arbitrary = oneof [ liftM (VDeg . Deg . compromiseMyself) arbitrary
+                    , liftM (VRad . Rad . compromiseMyself) arbitrary
+                    , liftM (VGrad . Grad . compromiseMyself) arbitrary
                     , liftM VColor arbitrary
-                    , liftM (VHz . Hz) arbitrary
-                    , liftM (VKHz . KHz) arbitrary
+                    , liftM (VHz . Hz . compromiseMyself) arbitrary
+                    , liftM (VKHz . KHz . compromiseMyself) arbitrary
                     , liftM VFunc arbitrary
                     , liftM VIdent arbitrary
                     , liftM VInt arbitrary
-                    , liftM (VEm . Em) arbitrary
-                    , liftM (VEx . Ex) arbitrary
+                    , liftM (VEm . Em . compromiseMyself) arbitrary
+                    , liftM (VEx . Ex . compromiseMyself) arbitrary
                     , liftM (VPx . Px) arbitrary
-                    , liftM (VIn . In) arbitrary
-                    , liftM (VCm . Cm) arbitrary
-                    , liftM (VMm . Mm) arbitrary
-                    , liftM (VPc . Pc) arbitrary
+                    , liftM (VIn . In . compromiseMyself) arbitrary
+                    , liftM (VCm . Cm . compromiseMyself) arbitrary
+                    , liftM (VMm . Mm . compromiseMyself) arbitrary
+                    , liftM (VPc . Pc . compromiseMyself) arbitrary
                     , liftM (VPt . Pt) arbitrary
-                    , liftM VDouble arbitrary
-                    , liftM (VPercentage . Percentage) arbitrary
+                    , liftM (VDouble . compromiseMyself) arbitrary
+                    , liftM (VPercentage . Percentage . compromiseMyself) arbitrary
                     , liftM VString arbitrary
-                    , liftM (VMs . Ms) arbitrary
-                    , liftM (VS . S) arbitrary
+                    , liftM (VMs . Ms . compromiseMyself) arbitrary
+                    , liftM (VS . S . compromiseMyself) arbitrary
                     , liftM VUri arbitrary
                     ]
 
