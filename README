@@ -9,6 +9,9 @@ This package contains [attoparsec][1] parsers for the [language-css][2] library.
 Caveats
 -------
 
+This package is not complete and almost certainly won't do anything you find
+useful, even in part.
+
 This package does not meet all of the requirements described in the CSS
 specification. In particular, it does not implement error handling and
 recovery.
