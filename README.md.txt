@@ -6,6 +6,8 @@ This package contains [attoparsec][1] parsers for the [language-css][2] library.
 [1]: http://hackage.haskell.org/package/attoparsec
 [2]: http://hackage.haskell.org/package/language-css
 
+[![Build Status](https://travis-ci.org/thsutton/language-css-attoparsec.png?branch=master)](https://travis-ci.org/thsutton/language-css-attoparsec)
+
 Caveats
 -------
 
