@@ -8,7 +8,7 @@ import Test.QuickCheck
 import Language.Css.Syntax as CSS
 
 -- | Compromise the validity of my tests, by generating truly biased doubles.
-compromiseMyself = fromInteger
+compromiseMyself i = 0.3 + (fromInteger i)
 
 newtype HtmlElement = HtmlElement String deriving (Show)
 
@@ -39,28 +39,28 @@ instance Arbitrary ImportHead where
                     ]
 
 instance Arbitrary Value where
-  arbitrary = oneof [ liftM (VDeg . Deg . compromiseMyself) arbitrary
-                    , liftM (VRad . Rad . compromiseMyself) arbitrary
-                    , liftM (VGrad . Grad . compromiseMyself) arbitrary
+  arbitrary = oneof [ liftM VDeg arbitrary
+                    , liftM VRad arbitrary
+                    , liftM VGrad arbitrary
                     , liftM VColor arbitrary
-                    , liftM (VHz . Hz . compromiseMyself) arbitrary
-                    , liftM (VKHz . KHz . compromiseMyself) arbitrary
+                    , liftM VHz arbitrary
+                    , liftM VKHz arbitrary
                     , liftM VFunc arbitrary
                     , liftM VIdent arbitrary
                     , liftM VInt arbitrary
-                    , liftM (VEm . Em . compromiseMyself) arbitrary
-                    , liftM (VEx . Ex . compromiseMyself) arbitrary
-                    , liftM (VPx . Px) arbitrary
-                    , liftM (VIn . In . compromiseMyself) arbitrary
-                    , liftM (VCm . Cm . compromiseMyself) arbitrary
-                    , liftM (VMm . Mm . compromiseMyself) arbitrary
-                    , liftM (VPc . Pc . compromiseMyself) arbitrary
-                    , liftM (VPt . Pt) arbitrary
+                    , liftM VEm arbitrary
+                    , liftM VEx arbitrary
+                    , liftM VPx arbitrary
+                    , liftM VIn arbitrary
+                    , liftM VCm arbitrary
+                    , liftM VMm arbitrary
+                    , liftM VPc arbitrary
+                    , liftM VPt arbitrary
                     , liftM (VDouble . compromiseMyself) arbitrary
-                    , liftM (VPercentage . Percentage . compromiseMyself) arbitrary
+                    , liftM VPercentage arbitrary
                     , liftM VString arbitrary
-                    , liftM (VMs . Ms . compromiseMyself) arbitrary
-                    , liftM (VS . S . compromiseMyself) arbitrary
+                    , liftM VMs arbitrary
+                    , liftM VS arbitrary
                     , liftM VUri arbitrary
                     ]
 
@@ -123,49 +123,49 @@ instance Arbitrary Sel where
     where head = liftM SSel arbitrary
 
 instance Arbitrary Deg where
-  arbitrary = liftM Deg arbitrary
+  arbitrary = liftM (Deg . compromiseMyself) arbitrary
 
 instance Arbitrary Rad where
-  arbitrary = liftM Rad arbitrary
+  arbitrary = liftM (Rad . compromiseMyself) arbitrary
 
 instance Arbitrary Grad where
-  arbitrary = liftM Grad arbitrary
+  arbitrary = liftM (Grad . compromiseMyself) arbitrary
 
 instance Arbitrary Hz where
-  arbitrary = liftM Hz arbitrary
+  arbitrary = liftM (Hz . compromiseMyself) arbitrary
 
 instance Arbitrary KHz where
-  arbitrary = liftM KHz arbitrary
+  arbitrary = liftM (KHz . compromiseMyself) arbitrary
 
 instance Arbitrary Em where
-  arbitrary = liftM Em arbitrary
+  arbitrary = liftM (Em . compromiseMyself) arbitrary
 
 instance Arbitrary Ex where
-  arbitrary = liftM Ex arbitrary
+  arbitrary = liftM (Ex . compromiseMyself) arbitrary
 
 instance Arbitrary Px where
   arbitrary = liftM Px arbitrary
 
 instance Arbitrary In where
-  arbitrary = liftM In arbitrary
+  arbitrary = liftM (In . compromiseMyself) arbitrary
 
 instance Arbitrary Cm where
-  arbitrary = liftM Cm arbitrary
+  arbitrary = liftM (Cm . compromiseMyself) arbitrary
 
 instance Arbitrary Mm where
-  arbitrary = liftM Mm arbitrary
+  arbitrary = liftM (Mm . compromiseMyself) arbitrary
 
 instance Arbitrary Pc where
-  arbitrary = liftM Pc arbitrary
+  arbitrary = liftM (Pc . compromiseMyself) arbitrary
 
 instance Arbitrary Pt where
   arbitrary = liftM Pt arbitrary
 
 instance Arbitrary Percentage where
-  arbitrary = liftM Percentage arbitrary
+  arbitrary = liftM (Percentage . compromiseMyself) arbitrary
 
 instance Arbitrary Ms where
-  arbitrary = liftM Ms arbitrary
+  arbitrary = liftM (Ms . compromiseMyself) arbitrary
 
 instance Arbitrary S where
-  arbitrary = liftM S arbitrary
+  arbitrary = liftM (S . compromiseMyself) arbitrary
