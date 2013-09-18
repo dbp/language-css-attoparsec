@@ -45,5 +45,10 @@ properties =
       , testProperty "in" $ roundTrip inp
       , testProperty "cm" $ roundTrip cmp
       , testProperty "mm" $ roundTrip mmp
+      , testProperty "pc" $ roundTrip pcp
+      , testProperty "pt" $ roundTrip ptp
+      , testProperty "%" $ roundTrip percentagep
+      , testProperty "ms" $ roundTrip msp
+      , testProperty "s" $ roundTrip sp
       ]
     ]
