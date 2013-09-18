@@ -121,3 +121,51 @@ instance Arbitrary Sel where
                     , liftM2 AdjSel head arbitrary
                     ]
     where head = liftM SSel arbitrary
+
+instance Arbitrary Deg where
+  arbitrary = liftM Deg arbitrary
+
+instance Arbitrary Rad where
+  arbitrary = liftM Rad arbitrary
+
+instance Arbitrary Grad where
+  arbitrary = liftM Grad arbitrary
+
+instance Arbitrary Hz where
+  arbitrary = liftM Hz arbitrary
+
+instance Arbitrary KHz where
+  arbitrary = liftM KHz arbitrary
+
+instance Arbitrary Em where
+  arbitrary = liftM Em arbitrary
+
+instance Arbitrary Ex where
+  arbitrary = liftM Ex arbitrary
+
+instance Arbitrary Px where
+  arbitrary = liftM Px arbitrary
+
+instance Arbitrary In where
+  arbitrary = liftM In arbitrary
+
+instance Arbitrary Cm where
+  arbitrary = liftM Cm arbitrary
+
+instance Arbitrary Mm where
+  arbitrary = liftM Mm arbitrary
+
+instance Arbitrary Pc where
+  arbitrary = liftM Pc arbitrary
+
+instance Arbitrary Pt where
+  arbitrary = liftM Pt arbitrary
+
+instance Arbitrary Percentage where
+  arbitrary = liftM Percentage arbitrary
+
+instance Arbitrary Ms where
+  arbitrary = liftM Ms arbitrary
+
+instance Arbitrary S where
+  arbitrary = liftM S arbitrary
