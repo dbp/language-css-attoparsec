@@ -237,8 +237,8 @@ valuep = choice [ VDeg <$> degreep
                 , VFunc <$> funcp
                 , VUri <$> urip
                 , VIdent <$> identp
-                , VInt <$> signed decimal
                 , VDouble <$> signed double
+                , VInt <$> signed decimal
                 ]
 
 -- | Parse CSS identifiers.
