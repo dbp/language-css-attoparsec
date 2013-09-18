@@ -16,11 +16,13 @@ import           Language.Css.Syntax
 
 -- | Parse a 'Data.Text.Text' into a 'StyleSheet' if possible.
 parseCss :: Text -> Maybe StyleSheet
-parseCss _ = Nothing
+parseCss doc = case (parseOnly styleSheetParser doc) of
+  Left _ -> Nothing
+  Right css -> Just css
 
 -- | Attoparsec parser for the CSS2.1 grammar.
 styleSheetParser :: Parser StyleSheet
-styleSheetParser = undefined
+styleSheetParser = error "Top-level parser undefined."
 
 -- | Parse a CSS \@charset rule.
 --
