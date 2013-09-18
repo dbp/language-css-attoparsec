@@ -30,13 +30,13 @@ instance Arbitrary Attr where
 -- instance Arbitrary Id where
 
 instance Arbitrary AtImport where
-  arbitrary = liftM2 AtImport arbitrary arbitrary
+  arbitrary = liftM2 AtImport arbitrary  arbitrary
 
+-- @todo Should this really wrap the value in quotes?
 instance Arbitrary ImportHead where
-  arbitrary = oneof [ liftM IStr arbitrary
+  arbitrary = oneof [ liftM (\s -> IStr $ "\"" ++ s ++ "\"") arbitrary
                     , liftM IUri arbitrary
                     ]
-
 
 instance Arbitrary Value where
   arbitrary = oneof [ liftM (VDeg . Deg . compromiseMyself) arbitrary
@@ -64,7 +64,6 @@ instance Arbitrary Value where
                     , liftM VUri arbitrary
                     ]
 
-
 instance Arbitrary Expr where
   arbitrary = oneof [ liftM  EVal     arbitrary
                     , liftM2 SlashSep arbitrary arbitrary
@@ -90,37 +89,25 @@ instance Arbitrary Func where
 --
 -- XXX TODO: this is completely broken.
 instance Arbitrary Uri where
-  arbitrary = do
-    s <- arbitrary
-    return $ Uri s
+  arbitrary = liftM Uri arbitrary
 
 instance Arbitrary PseudoVal where
   arbitrary =
-    oneof [ liftM PIdent arbitrary
+    oneof [ liftM PIdent arbitrary -- @todo Non-empty
           , liftM PFunc arbitrary
           ]
 
 instance Arbitrary SubSel where
   arbitrary =
     oneof [ liftM AttrSel arbitrary
-          , liftM ClassSel arbitrary
-          , liftM IdSel arbitrary
+          , liftM ClassSel arbitrary -- @todo Non-empty
+          , liftM IdSel arbitrary -- @todo Non-empty
           , liftM PseudoSel arbitrary
           ]
 
 instance Arbitrary SimpleSel where
-  -- UnivSel [SubSel]
-  -- TypeSel Element [SubSel]
-  -- TODO sub selectors
-  arbitrary = do
-    n <- choose (0, length htmlElements) :: Gen Int
-    case n of
-      0 -> do
-        sub <- arbitrary
-        return $ UnivSel sub
-      _ -> do
-        sub <- arbitrary
-        return $ TypeSel (htmlElements !! (n - 1)) sub
+  arbitrary = oneof $ map ( \f -> liftM f arbitrary)
+                      (UnivSel:(map TypeSel htmlElements))
 
 instance Arbitrary Sel where
 
@@ -128,6 +115,9 @@ instance Arbitrary Sel where
   -- DescendSel Sel Sel
   -- ChildSel Sel Sel
   -- AdjSel Sel Sel
-  arbitrary = do
-    sel <- arbitrary :: Gen SimpleSel
-    return $ SSel sel
+  arbitrary = oneof [ liftM SSel arbitrary
+                    , liftM2 DescendSel head arbitrary
+                    , liftM2 ChildSel head arbitrary
+                    , liftM2 AdjSel head arbitrary
+                    ]
+    where head = liftM SSel arbitrary
