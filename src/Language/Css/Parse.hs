@@ -110,15 +110,41 @@ exprp = EVal <$> valuep <|>
         SpaceSep <$> exprp <*> (char ' ' *> exprp)
 
 -- | Parse CSS selectors.
+--
+-- @todo Include additional cases.
 selp :: Parser Sel
-selp = undefined
+selp = choice [child, adj, desc, simple]
+  where simple = simpleselp >>= return . SSel
+        desc = do
+               sel1 <- simple
+               skipMany1 (satisfy isSpace)
+               sel2 <- selp
+               return $ DescendSel sel1 sel2
+        child = do
+                sel1 <- simple
+                skipSpace
+                char '>'
+                skipSpace
+                sel2 <- selp
+                return $ ChildSel sel1 sel2
+        adj = do sel1 <- simple
+                 skipSpace
+                 char '+'
+                 skipSpace
+                 sel2 <- selp
+                 return $ AdjSel sel1 sel2
 
 -- | Parse simple CSS selectors.
 --
 -- '*' $subsel*
 -- $el $subsel*
 simpleselp :: Parser SimpleSel
-simpleselp = undefined
+simpleselp = do
+  start <- choice [starp, elemp]
+  subsel <- many subselp
+  return $ start subsel
+  where starp = char '*' >> return UnivSel
+        elemp = elementp >>= (return . TypeSel)
 
 -- | Parse CSS sub-selectors.
 --
@@ -127,53 +153,56 @@ simpleselp = undefined
 -- id selectors
 -- pseudo selectors
 subselp :: Parser SubSel
-subselp = choice [selip, selcp , selap {-, selpp-}]
+subselp = choice [selip, selcp , selap, selpp]
 
+-- | Parse CSS ID selectors.
+--
 -- XXX TODO: This is extremely wrong.
 selip = char '#' >> takeWhile1 (not . isHorizontalSpace)
         >>= return . IdSel . T.unpack
 
+-- | Parse CSS class selectors.
+--
 -- XXX TODO: This is extremely wrong.
 selcp = char '.' >> takeWhile1 (not . isHorizontalSpace)
         >>= return . ClassSel . T.unpack
 
+-- | Parse CSS pseudo selectors.
+--
 -- XXX TODO: This is very wrong.
 selpp = do
   char ':'
-  s <- identp
-  return $ PseudoSel 
+  sel <- choice [pseudofn, pseudoident]
+  return $ PseudoSel sel
+  where pseudoident = identp >>= return . PIdent
+        pseudofn = funcp >>= return . PFunc
 
+-- | Parse CSS attribute selectors.
+--
 -- XXX TODO: This is very wrong.
 selap = do
-  char '['
-  a <- attrp
-  char ']'
+  a <- char '[' *> attrp <* char ']'
   return $ (AttrSel a)
 
 -- | Parse CSS element names.
 --
 -- identp?
 elementp :: Parser String
-elementp = undefined
+elementp = many1 (letter <|> digit)
 
 -- | Parse CSS attribute selector expressions.
+--
+-- @todo Should be using AttrVal in these parsers.
 attrp :: Parser Attr
 attrp =
-  char '[' *> {- space* -} (choice options) {- space* -} <* char ']'
+  {- space* -} (choice options) {- space* -}
   <?> "Attribute selector."
   where
     options = [attr_is, attr_contains, attr_starts, attr_name]
     attr_name = (Attr) <$> attridentp <?> "Attribute present selector."
-    attr_is = do
-      n <- attridentp
-      -- space*
-      char '='
-      -- space*
-      v <- attridentp
-      return $ AttrIs n v
-      <?> "Attribute value selector."
-    attr_contains = fail "None" <?> "Attribute 'contains' selector."
-    attr_starts = fail "None" <?> "Attribute 'starts' selector."
+    attr_is = (AttrIs) <$> attridentp <* char '=' <*> attridentp <?> "Attribute value selector."
+    attr_contains = AttrIncl <$> attridentp <* string "~=" <*> attridentp <?> "Attribute 'contains' selector."
+    attr_starts = AttrBegins <$> attridentp <* string "|=" <*> attridentp <?> "Attribute 'starts' selector."
 
 -- | Parse CSS attribute names.
 attridentp = many1 (letter <|> digit)
