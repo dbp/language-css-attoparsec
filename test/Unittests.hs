@@ -25,5 +25,5 @@ parseFile :: FilePath -> IO ()
 parseFile file = do
   txt <- TIO.readFile $ "test/data/" ++ file
   case (parseCss txt) of
-    Just _ -> return ()
+    Just css -> putStrLn $ prettyPrint css
     Nothing -> error $ "Couldn't parse " ++ file

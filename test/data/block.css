@@ -1,7 +1,3 @@
-/*
- * A sample CSS file.
- */
-
 html, body {
 	margin: 0;
 	padding: 0px;
@@ -11,5 +7,5 @@ html, body {
 
 body {
 	font: "sans-serif";
-	line-height: 1.4em;
+	font-size: 1em/1.4em;
 }
