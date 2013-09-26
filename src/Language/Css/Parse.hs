@@ -22,13 +22,22 @@ parseCss doc = case (parseOnly styleSheetParser doc) of
 
 -- | Attoparsec parser for the CSS2.1 grammar.
 styleSheetParser :: Parser StyleSheet
-styleSheetParser = error "Top-level parser undefined."
+styleSheetParser = StyleSheet <$> (option Nothing $ Just <$> atcharsetp)
+                              <*> many atimportp
+                              <*> many stylebodyp
+
+stylebodyp :: Parser StyleBody
+stylebodyp = SAtFontFace <$> atfontfacep <|>
+             SAtPage <$> atpagep <|>
+             SAtMedia <$> atmediap <|>
+             SRuleSet <$> rulesetp
 
 -- | Parse a CSS \@charset rule.
 --
 -- > @charset "UTF-8";
 atcharsetp :: Parser AtCharSet
-atcharsetp = AtCharSet <$> (asciiCI "@charset" *> skipSpace *> stringp <* skipSpace <* char ';')
+atcharsetp = AtCharSet <$> (asciiCI "@charset" *> skipSpace *> stringp)
+                       <* skipSpace <* char ';' <* skipSpace
 
 -- | Parse a CSS \@import rule.
 --
@@ -37,7 +46,7 @@ atcharsetp = AtCharSet <$> (asciiCI "@charset" *> skipSpace *> stringp <* skipSp
 atimportp :: Parser AtImport
 atimportp = AtImport <$> (asciiCI "@import" *> skipSpace *> atimportheadp)
                      <*> (skipSpace *> mediap `sepBy` (char ',' >> skipSpace))
-                     <*  (skipSpace <* char ';')
+                     <*  (skipSpace <* char ';' <* skipSpace)
 
 -- | Parse the location of an \@import statment.
 -- 
@@ -59,25 +68,29 @@ atmediap = AtMedia <$> (asciiCI "@media" *> skipSpace *> identp `sepBy` (char ',
 --
 -- \@page $ident? $pseudopage? { $decls }
 atpagep :: Parser AtPage
-atpagep = undefined
+atpagep = string "@page" *> fail "No parsing @page."
 
 -- | Parse \@font-face declarations.
 --
 -- \@font-face { $decls }
 atfontfacep :: Parser AtFontFace
-atfontfacep = undefined
+atfontfacep = string "@font-face" *> fail "No parsing @font-face"
 
 -- | Parse CSS rulesets.
 --
 -- > $sel { $decls }
 rulesetp :: Parser RuleSet
-rulesetp = undefined
+rulesetp = RuleSet <$> selectors <*> (skipSpace *> decls <* skipSpace)
+           where selectors = sepBy selp (skipSpace *> char ',' <* skipSpace)
+                 decls = char '{' *> sepBy declp sep <* (option ' ' sep) <* char '}'
+                 sep = skipSpace *> char ';' <* skipSpace
 
 -- | Parse CSS declarations.
 --
 -- > $property ':' $expression $priority? ';'?
 declp :: Parser Decl
 declp = do
+  skipSpace
   name <- propp
   skipSpace
   char ':'
@@ -85,8 +98,6 @@ declp = do
   val <- exprp
   skipSpace
   pri <- priop
-  skipSpace
-  char ';'
   skipSpace
   return $ Decl pri name val
 
@@ -104,35 +115,24 @@ priop = (asciiCI "!important" >> return (Just Important)) <|> (return Nothing)
 
 -- | Parse CSS value expressions.
 exprp :: Parser Expr
-exprp = EVal <$> valuep <|>
-        SlashSep <$> exprp <*> (char '/' *> exprp) <|>
-        CommaSep <$> exprp <*> (char ',' *> exprp) <|>
-        SpaceSep <$> exprp <*> (char ' ' *> exprp)
+exprp = choice [slashp, commap, spacep, evalp]
+  where
+    evalp = EVal <$> valuep
+    slashp = SlashSep <$> evalp <*> (char '/' *> exprp)
+    commap = CommaSep <$> evalp <*> (char ',' *> exprp)
+    spacep = SpaceSep <$> evalp <*> (char ' ' *> exprp)
 
 -- | Parse CSS selectors.
---
--- @todo Include additional cases.
 selp :: Parser Sel
 selp = choice [child, adj, desc, simple]
-  where simple = simpleselp >>= return . SSel
-        desc = do
-               sel1 <- simple
-               skipMany1 (satisfy isSpace)
-               sel2 <- selp
-               return $ DescendSel sel1 sel2
-        child = do
-                sel1 <- simple
-                skipSpace
-                char '>'
-                skipSpace
-                sel2 <- selp
-                return $ ChildSel sel1 sel2
-        adj = do sel1 <- simple
-                 skipSpace
-                 char '+'
-                 skipSpace
-                 sel2 <- selp
-                 return $ AdjSel sel1 sel2
+  where simple = SSel <$> simpleselp
+        desc = DescendSel <$> simple
+                          <*> (skipSpace *> selp <* skipSpace)
+        child = ChildSel <$> simple
+                         <*> (skipSpace *> char '>' *> skipSpace *> selp <* skipSpace)
+        adj = AdjSel <$> (simple <* skipSpace)
+                     <*> (char '+' *> skipSpace *> selp)
+                     <*  skipSpace
 
 -- | Parse simple CSS selectors.
 --
@@ -212,7 +212,7 @@ attridentp = many1 (letter <|> digit)
 -- ':' $ident
 -- ':' $function
 pseudovalp :: Parser PseudoVal
-pseudovalp = undefined
+pseudovalp = error "pseudovalp"
 
 -- | Parse CSS values.
 valuep :: Parser Value
@@ -436,7 +436,7 @@ nl = choice [char '\n', string "\r\n" >> return '\n', char '\r', char '\f']
 nmstartp :: Parser Char
 nmstartp = nonasciip <|> escapep <|> (satisfy nmstart)
 
-nmstart c | c == '_' = True
+nmstart c | c == '-' = True
           | 'a' <= c && c <= 'z' = True
           | otherwise = False
 
