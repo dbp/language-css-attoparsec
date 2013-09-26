@@ -8,7 +8,7 @@ import Unittests (unittests)
 import Test.Framework (defaultMain, testGroup)
 
 main :: IO ()
-main = defaultMain [ testGroup "properties" properties
-                   , testGroup "unittests" unittests
+main = defaultMain [ testGroup "unittests" unittests
+                -- , testGroup "properties" properties
                    ]
 
