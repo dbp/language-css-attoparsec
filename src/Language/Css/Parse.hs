@@ -136,13 +136,12 @@ selp = choice [child, adj, desc, simple]
 
 -- | Parse simple CSS selectors.
 --
+-- $subsel+
 -- '*' $subsel*
 -- $el $subsel*
 simpleselp :: Parser SimpleSel
 simpleselp = do
-  start <- choice [starp, elemp]
-  subsel <- many subselp
-  return $ start subsel
+  choice [($) <$> starp <*> many subselp, ($) <$> elemp <*> many subselp, UnivSel <$> many1 subselp]
   where starp = char '*' >> return UnivSel
         elemp = elementp >>= (return . TypeSel)
 
