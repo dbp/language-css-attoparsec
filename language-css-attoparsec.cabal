@@ -4,7 +4,7 @@ Cabal-Version: >= 1.8
 License:       BSD3
 License-file:  LICENSE
 Author:        Thomas Sutton
-Synopsis:      Parser for CSS 2.1 syntax. 
+Synopsis:      Parser for CSS 2.1 syntax.
 Description:   library for parsing CSS 2.1 code.
 Stability:     Experimental
 Tested-With:   GHC==7.6.3
@@ -44,3 +44,13 @@ Test-Suite test-parser
                   language-css-attoparsec >= 0.0.3
 
 
+Test-Suite test-specs
+  Type:           exitcode-stdio-1.0
+  Hs-Source-Dirs: spec/
+  Main-Is:        Main.hs
+  Build-Depends:  base >= 4 && < 5,
+                  hspec2 >= 0.4 && < 0.5,
+                  attoparsec >= 0.10,
+                  text >= 0.11,
+                  language-css >= 0.0.3,
+                  language-css-attoparsec >= 0.0.3
