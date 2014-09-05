@@ -2,15 +2,15 @@
 -- | Parse CSS text into the AST defined in "Language.Css.Syntax".
 module Language.Css.Parse where
 
-import Prelude hiding (take, takeWhile, exp)
 import           Control.Applicative
-import           Data.Attoparsec.Text
 import           Data.Attoparsec.Combinator
-import           Data.Bits (shiftL)
+import           Data.Attoparsec.Text
+import           Data.Bits                  (shiftL)
 import           Data.Char
 import           Data.Int
-import           Data.Text (Text)
-import qualified Data.Text as T
+import           Data.Text                  (Text)
+import qualified Data.Text                  as T
+import           Prelude                    hiding (exp, take, takeWhile)
 
 import           Language.Css.Syntax
 
@@ -49,7 +49,7 @@ atimportp = AtImport <$> (asciiCI "@import" *> skipSpace *> atimportheadp)
                      <*  (skipSpace <* char ';' <* skipSpace)
 
 -- | Parse the location of an \@import statment.
--- 
+--
 -- This parser accepts either a quoted string or a CSS url literal.
 atimportheadp :: Parser ImportHead
 atimportheadp = (IStr <$> stringp) <|> (IUri <$> urip)
@@ -315,7 +315,7 @@ hex3color = char '#' *> (Crgb <$> hex <*> hex <*> hex) <?> "3-digit hexadecimcal
 --
 -- NB: This parser accepts values outside the range of 0..255. This is
 -- deliberate and required by the specification.
--- 
+--
 -- > rgb(1,255,78)
 -- > rgb(110%,0,50%)
 --
@@ -411,8 +411,8 @@ urlp = T.unpack <$> takeTill (== ')') <?> "Unquoted URL string."
 -- > string		{string1}|{string2}
 stringp :: Parser String
 stringp = dquotesp <|> squotesp <?> "Quoted string."
-  where dquotesp = "\"" .*> stringOf (/= '"') <*. "\""
-        squotesp = "'" .*> stringOf (/= '\'') <*. "'"
+  where dquotesp = "\"" *> stringOf (/= '"') <* "\""
+        squotesp = "'" *> stringOf (/= '\'') <* "'"
         stringOf p = takeWhile p >>= return . T.unpack
 
 -- | Parse escaped unicode characters.
@@ -455,7 +455,7 @@ nmcharp = nmstartp <|> digit
 -- Assumes that the characters are valid hexadecimal digits.
 intFromHex :: Char -> Char -> Int
 intFromHex h l = (high $ ord h) + (low $ ord l)
-  where 
+  where
     high w | w >= 48 && w <= 57  = fromIntegral (w - 48) `shiftL` 4
            | w >= 97             = fromIntegral (w - 87) `shiftL` 4
            | otherwise           = fromIntegral (w - 55) `shiftL` 4
