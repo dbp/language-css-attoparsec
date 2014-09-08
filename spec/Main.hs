@@ -23,6 +23,9 @@ shouldNotParse p t = it (T.unpack t) (shouldBeRight . flipEither . parseOnly (p 
   where flipEither (Right v) = Left v
         flipEither (Left v) = Right v
 
+shouldParseAs :: (Show a, Eq a) => Parser a -> Text -> a ->  Spec
+shouldParseAs p t v = it (T.unpack t) $ shouldBe (parseOnly (p <* endOfInput) t) (Right v)
+
 main = hspec $ do
   describe "selp" $ do
     describe "should parse" $ do
@@ -62,3 +65,8 @@ main = hspec $ do
     describe "should not parse" $ do
       declp `shouldNotParse` "some prop: val"
       declp `shouldNotParse` "99hh9: val"
+  describe "valuep" $ do
+    describe "should parse" $ do
+      valuep `shouldParse` "2"
+      shouldParseAs valuep "2" (C.VInt 2)
+      shouldParseAs valuep "2.2" (C.VDouble 2.2)

@@ -215,30 +215,43 @@ pseudovalp = error "pseudovalp"
 
 -- | Parse CSS values.
 valuep :: Parser Value
-valuep = choice [ VDeg <$> degreep
-                , VRad <$> radianp
-                , VGrad <$> gradianp
-                , VColor <$> colorp
-                , VHz <$> hzp
-                , VKHz <$> khzp
-                , VPercentage <$> percentagep
-                , VEm <$> emp
-                , VEx <$> exp
-                , VPx <$> pxp
-                , VIn <$> inp
-                , VCm <$> cmp
-                , VMm <$> mmp
-                , VPc <$> pcp
-                , VPt <$> ptp
-                , VString <$> stringp
-                , VMs <$> msp
-                , VS <$> sp
-                , VFunc <$> funcp
-                , VUri <$> urip
-                , VIdent <$> identp
-                , VDouble <$> signed double
-                , VInt <$> signed decimal
-                ]
+valuep = doubleFix <$> choice [ VDeg <$> degreep
+                              , VRad <$> radianp
+                              , VGrad <$> gradianp
+                              , VColor <$> colorp
+                              , VHz <$> hzp
+                              , VKHz <$> khzp
+                              , VPercentage <$> percentagep
+                              , VEm <$> emp
+                              , VEx <$> exp
+                              , VPx <$> pxp
+                              , VIn <$> inp
+                              , VCm <$> cmp
+                              , VMm <$> mmp
+                              , VPc <$> pcp
+                              , VPt <$> ptp
+                              , VString <$> stringp
+                              , VMs <$> msp
+                              , VS <$> sp
+                              , VFunc <$> funcp
+                              , VUri <$> urip
+                              , VIdent <$> identp
+                              , VDouble <$> double
+                              ]
+        -- NOTE(dbp 2014-09-08): Since all ints parse as valid
+        -- doubles, and doubles have int prefixes, we can't just put
+        -- decimal and double in a choice. Since I don't want to
+        -- custom write a numeric parser (at least at this point),
+        -- I've just parsed both as VDouble, and I'm converting whole
+        -- numbers to VInts.
+        --
+        -- This means that "2.0" will parse as VInt 2, not VDouble
+        -- 2.0.  On the other hand, current behavior was to turn 2 to
+        -- 2.0, which actually turned valid css (z-index: 2) into
+        -- invalid (z-index: 2.0). AFAIK, there is no case where 2.0
+        -- will not be able to be replaced with 2.
+  where doubleFix (VDouble n) | n == fromIntegral (truncate n :: Int) = VInt (truncate n)
+        doubleFix v = v
 
 -- | Parse CSS identifiers.
 --
