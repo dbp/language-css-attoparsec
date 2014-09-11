@@ -48,6 +48,10 @@ main = hspec $ do
     describe "should not parse" $ do
       simpleselp `shouldNotParse` "foo + bar"
       simpleselp `shouldNotParse` "foo > bar"
+  describe "selpp" $ do
+    describe "should parse" $ do
+      selpp `shouldParse` ":hover"
+      selpp `shouldParse` ":nth-child(even)"
   describe "rulesetp" $ do
     describe "should parse" $ do
       rulesetp `shouldParse` ".foo {}"
@@ -55,6 +59,7 @@ main = hspec $ do
       rulesetp `shouldParse` "p {\n  prop: value;\n }"
       rulesetp `shouldParse` "p{prop: value;}"
       rulesetp `shouldParse` "p >q{ prop: 1em; prop-two: 2px solid #000;}"
+      rulesetp `shouldParse` "p { }"
     describe "should not parse" $ do
       rulesetp `shouldNotParse` "p"
       rulesetp `shouldNotParse` "p { prop: val prop: val }"

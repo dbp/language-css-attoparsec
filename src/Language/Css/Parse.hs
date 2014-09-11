@@ -82,7 +82,7 @@ atfontfacep = string "@font-face" *> fail "No parsing @font-face"
 rulesetp :: Parser RuleSet
 rulesetp = RuleSet <$> selectors <*> (skipSpace *> decls <* skipSpace)
            where selectors = sepBy selp (skipSpace *> char ',' <* skipSpace)
-                 decls = char '{' *> sepBy declp sep <* (option ' ' sep) <* char '}'
+                 decls = char '{' *> skipSpace *> sepBy declp sep <* (option ' ' sep) <* char '}'
                  sep = skipSpace *> char ';' <* skipSpace
 
 -- | Parse CSS declarations.
