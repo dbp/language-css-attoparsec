@@ -119,8 +119,8 @@ exprp = choice [slashp, commap, spacep, evalp]
   where
     evalp = EVal <$> valuep
     slashp = SlashSep <$> evalp <*> (char '/' *> exprp)
-    commap = CommaSep <$> evalp <*> (char ',' *> exprp)
-    spacep = SpaceSep <$> evalp <*> (char ' ' *> exprp)
+    commap = CommaSep <$> evalp <*> (char ',' *> skipSpace *> exprp)
+    spacep = SpaceSep <$> evalp <*> (skipSpace *> exprp)
 
 -- | Parse CSS selectors.
 selp :: Parser Sel

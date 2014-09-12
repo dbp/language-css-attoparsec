@@ -67,9 +67,14 @@ main = hspec $ do
     describe "should parse" $ do
       declp `shouldParse` "text-align: center"
       declp `shouldParse` "background-image: url(\"https://path/to/image.ext\")"
+      declp `shouldParse` "font-family: \"foo-font\", sans-serif"
     describe "should not parse" $ do
       declp `shouldNotParse` "some prop: val"
       declp `shouldNotParse` "99hh9: val"
+  describe "exprp" $ do
+    describe "should parse" $ do
+      exprp `shouldParse` "serif, sans-serif"
+      exprp `shouldParse` "\"foo-font\", sans-serif"
   describe "valuep" $ do
     describe "should parse" $ do
       valuep `shouldParse` "2"
